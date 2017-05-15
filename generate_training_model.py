@@ -18,78 +18,117 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 #These are the functions for our transformers
 class LevDistanceTransformer(BaseEstimator, TransformerMixin):
-    """Takes in two lists of strings, extracts the lev distance between each string, returns list"""
+	"""Takes in two lists of strings, extracts the lev distance between each string, returns list"""
 
-    def __init__(self):
-        pass
+	def __init__(self):
+		pass
 
-    def transform(self, question_list):
-        q1_list = question_list[0]
-        q2_list = question_list[1]
-        
-        lev_distance_strings = [[a,b] 
-        for a,b in zip(q1_list, q2_list)]
-        
-        lev_dist_array = np.array([
-    (float(levenshtein(pair[0], pair[1]))/
-    (float(sum([x.count('') for x in pair[0]])) + 
-    float(sum([x.count('') for x in pair[1]])))) 
-    for pair in lev_distance_strings 
-        ])
-        
-        return lev_dist_array.reshape(len(lev_dist_array),1)
+	def transform(self, question_list):
+		q1_list = question_list[0]
+		q2_list = question_list[1]
+		
+		lev_distance_strings = [[a,b] 
+		for a,b in zip(q1_list, q2_list)]
+		
+		lev_dist_array = np.array([
+	(float(levenshtein(pair[0], pair[1]))/
+	(float(sum([x.count('') for x in pair[0]])) + 
+	float(sum([x.count('') for x in pair[1]])))) 
+	for pair in lev_distance_strings 
+		])
+		
+		return lev_dist_array.reshape(len(lev_dist_array),1)
 
-    def fit(self, question_list, y=None):
-        """Returns `self` unless something different happens in train and test"""
-        return self
-    
+	def fit(self, question_list, y=None):
+		"""Returns `self` unless something different happens in train and test"""
+		return self
+	
 class TfIdfDiffTransformer(BaseEstimator, TransformerMixin):
-    """Takes in two lists of strings, extracts the lev distance between each string, returns list"""
+	"""Takes in two lists of strings, extracts the lev distance between each string, returns list"""
 
-    def __init__(self, total_words):
-        pass
+	def __init__(self, total_words):
+		pass
 
-    def transform(self, question_list):
-        q1_list = question_list[0]
-        q2_list = question_list[1]
-        total_questions = q1_list + q2_list
-        total_questions = [x for x in total_questions if type(x) != float]
-        
-        vectorizer = TfidfVectorizer(stop_words = 'english', vocabulary = total_words)
-        vectorizer.fit(total_questions)
-        tf_diff = vectorizer.transform(q1_list) - vectorizer.transform(q2_list)
-        return tf_diff
+	def transform(self, question_list):
+		q1_list = question_list[0]
+		q2_list = question_list[1]
+		total_questions = q1_list + q2_list
+		total_questions = [x for x in total_questions if type(x) != float]
+		
+		vectorizer = TfidfVectorizer(stop_words = 'english', vocabulary = total_words)
+		vectorizer.fit(total_questions)
+		tf_diff = vectorizer.transform(q1_list) - vectorizer.transform(q2_list)
+		return tf_diff
 
-    def fit(self, question_list, y=None):
-        """Returns `self` unless something different happens in train and test"""
-        return self
-    
+	def fit(self, question_list, y=None):
+		"""Returns `self` unless something different happens in train and test"""
+		return self
+	
 class CosineDistTransformer(BaseEstimator, TransformerMixin):
-    """Takes in two lists of strings, extracts the lev distance between each string, returns list"""
+	"""Takes in two lists of strings, extracts the lev distance between each string, returns list"""
 
-    def __init__(self):
-        pass
+	def __init__(self):
+		pass
 
-    def transform(self, question_list):
-        q1_list = question_list[0]
-        q2_list = question_list[1]
-        total_questions = q1_list + q2_list
-        total_questions = [x for x in total_questions if type(x) != float]
-        
-        vectorizer = TfidfVectorizer(stop_words = 'english')
-        vectorizer.fit(total_questions)
-        
-        q1_tf = vectorizer.transform(q1_list) 
-        q2_tf = vectorizer.transform(q2_list)
-        cos_sim = []
-        for i in range(0,len(q1_list)):
-            cos_sim.append(cosine_similarity(q1_tf[i], q2_tf[i])[0][0])
-            
-        return np.array(cos_sim).reshape(len(cos_sim),1)
+	def transform(self, question_list):
+		q1_list = question_list[0]
+		q2_list = question_list[1]
+		total_questions = q1_list + q2_list
+		total_questions = [x for x in total_questions if type(x) != float]
+		
+		vectorizer = TfidfVectorizer(stop_words = 'english')
+		vectorizer.fit(total_questions)
+		
+		q1_tf = vectorizer.transform(q1_list) 
+		q2_tf = vectorizer.transform(q2_list)
+		cos_sim = []
+		for i in range(0,len(q1_list)):
+			cos_sim.append(cosine_similarity(q1_tf[i], q2_tf[i])[0][0])
+			
+		return np.array(cos_sim).reshape(len(cos_sim),1)
 
-    def fit(self, question_list, y=None):
-        """Returns `self` unless something different happens in train and test"""
-        return self
+	def fit(self, question_list, y=None):
+		"""Returns `self` unless something different happens in train and test"""
+		return self
+
+class AverageSharedWords(BaseEstimator, TransformerMixin):
+	"""Takes in two lists of strings, extracts the lev distance between each string, returns list"""
+
+	def __init__(self):
+		pass
+
+	def shared_words(q1,q2):
+		question1_words = []
+		question2_words = []
+		
+		for word in set(str(q1).lower().split()):
+			if word not in stop_words:
+				question1_words.append(word)
+				
+		for word in set(str(q2).lower().split()):
+			if word not in stop_words:
+				question2_words.append(word)
+		
+		#Question contains only stop words (or is an empty string)
+		if len(question1_words) == 0 or len(question2_words) == 0:
+			return 0
+		
+		question1_shared_words = [w for w in question1_words if w in question2_words]
+		question2_shared_words = [w for w in question2_words if w in question1_words]
+		
+		avg_words_shared = (len(question1_shared_words) + len(question2_shared_words))/(len(question1_words) + len(question2_words))
+		return avg_words_shared
+
+	def transform(self, question_list):
+		q1_list = question_list[0]
+		q2_list = question_list[1]
+		avg_words = [shared_words(q1,q2) for q1, q2 in zip(q1_list, q2_list)]
+			
+		return np.array(avg_words).reshape(len(avg_words),1)
+
+	def fit(self, question_list, y=None):
+		"""Returns `self` unless something different happens in train and test"""
+		return self
 
 
 ##########################################
@@ -99,7 +138,7 @@ class CosineDistTransformer(BaseEstimator, TransformerMixin):
 data = pd.read_csv('train.csv')
 data['question1'] = data['question1'].astype(str)
 data['question2'] = data['question2'].astype(str)
-y = data['is_duplicate'][0:1000]
+y = data['is_duplicate']
 
 test_data = pd.read_csv('test.csv')
 test_data['question1'] = test_data['question1'].astype(str)
@@ -110,14 +149,14 @@ data = data.drop(['id', 'qid1', 'qid2'], axis=1)
 
 #Use word vocabulary from training data
 vectorizer = TfidfVectorizer(stop_words = 'english')
-vectorizer.fit(data['question1'][0:1000] + data['question2'][0:1000])
+vectorizer.fit(data['question1'] + data['question2'])
 total_words = list(set(vectorizer.get_feature_names()))
 # # ##########################################
 
 #Combine the two features and predict using the combined set
 comb_features = FeatureUnion([('tf', TfIdfDiffTransformer(total_words)), ('cos_diff',CosineDistTransformer()), ('lev', LevDistanceTransformer())])
-comb_features.fit([data['question1'][0:1000], data['question2'][0:1000]])
-train_features = comb_features.transform([data['question1'][0:1000], data['question2'][0:1000]])
+comb_features.fit([data['question1'], data['question2']])
+train_features = comb_features.transform([data['question1'], data['question2']])
 
 #Create a Random Forest Classifier and train it on our data
 clf = RandomForestClassifier()
@@ -135,13 +174,13 @@ with open('rf_tfidf_cos_lev.sav', 'wb') as file:
 	pickle.dump(scores, file)
 #Predict on the test set
 
-test_features = comb_features.transform([test_data['question1'][0:1000], test_data['question2'][0:1000]])
+test_features = comb_features.transform([test_data['question1'], test_data['question2']])
 test_prediction = clf.predict(test_features)
 
 #Output the predictions 
 submission = pd.DataFrame()
-submission['test_id'] = test_data['test_id'][0:1000]
+submission['test_id'] = test_data['test_id']
 submission['is_duplicate'] = test_prediction
-submission['question1'] = test_data['question1'][0:1000] 
-submission['question2'] = test_data['question2'][0:1000] 
+submission['question1'] = test_data['question1'] 
+submission['question2'] = test_data['question2'] 
 submission.to_csv('submission.csv', index = False)
